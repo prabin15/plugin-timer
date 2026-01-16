@@ -1,0 +1,83 @@
+#pt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 100000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px);
+}
+
+#pt-modal {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 320px;
+  text-align: center;
+}
+
+.pt-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+#pt-modal h3 {
+  margin: 0 0 10px 0;
+  font-size: 20px;
+}
+
+.pt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.pt-grid button:last-child {
+  grid-column: span 2;
+}
+
+.pt-btn {
+  padding: 12px;
+  background: #f6f7f7;
+  border: 1px solid #c3c4c7;
+  border-radius: 6px;
+  color: #2271b1;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pt-btn:hover {
+  background: #2271b1;
+  color: white;
+  border-color: #2271b1;
+}
+
+#pt-cancel {
+  background: none;
+  border: none;
+  color: #d63638;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.pt-badge-active {
+  background: #00a32a;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.pt-card {
+  background: white;
+  padding: 20px;
+  border: 1px solid #c3c4c7;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  margin-top: 20px;
+}

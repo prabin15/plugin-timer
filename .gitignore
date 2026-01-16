@@ -1,0 +1,35 @@
+# WordPress Core & Config
+wp-config.php
+wp-content/uploads/
+wp-content/upgrade/
+wp-content/cache/
+
+# Ignore our plugin's specific log folder (IMPORTANT)
+# We don't want to commit crash reports to the repo
+/logs/
+/pt-logs/
+wp-content/uploads/pt-logs/
+
+# IDE & OS Files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Packages
+node_modules/
+vendor/
+package-lock.json
+yarn.lock
+composer.lock
+
+# Build files (if you add build steps later)
+assets/*.min.js
+assets/*.min.css
+
+# Local Development / Crash Test Dummy
+# Don't commit the crash test plugin itself
+crash-test/
+crash-suite/
