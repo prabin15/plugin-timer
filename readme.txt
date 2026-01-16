@@ -1,6 +1,5 @@
 === Safe Activation & Timer ===
 Contributors: prabinregmi
-Donate link: https://example.com/donate
 Tags: debug, fatal error, crash protection, security, maintenance
 Requires at least: 5.8
 Tested up to: 6.4
