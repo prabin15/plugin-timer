@@ -2,7 +2,7 @@
 Contributors: prabinregmi
 Tags: debug, fatal error, crash protection, security, maintenance
 Requires at least: 5.8
-Tested up to: 6.4
+Tested up to: 6.9
 Stable tag: 2.2.0
 Requires PHP: 7.4
 License: GPLv2 or later

@@ -1,3 +1,4 @@
+<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
 <div class="pt-card" style="max-width: 800px;">
     <h2>📘 User Guide</h2>
     <p class="description">

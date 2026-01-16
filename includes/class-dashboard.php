@@ -5,24 +5,29 @@ class PT_Dashboard {
 
     public function __construct() {
         add_action( 'admin_menu', [ $this, 'register_menu' ] );
-        // NEW: Listen for the clear action
         add_action( 'admin_init', [ $this, 'handle_clear_logs' ] );
     }
 
     public function handle_clear_logs() {
-        // Check if button was clicked and user has permission
+        // FIX: Verify Nonce
         if ( isset( $_POST['pt_clear_logs'] ) && current_user_can( 'manage_options' ) ) {
+            
+            if ( ! isset( $_POST['pt_clear_logs_nonce'] ) || ! wp_verify_nonce( $_POST['pt_clear_logs_nonce'], 'pt_clear_logs_action' ) ) {
+                wp_die( 'Security check failed' );
+            }
+
             delete_option( 'pt_error_logs' );
-            // Refresh the page to show empty state
-            wp_redirect( admin_url( 'tools.php?page=plugin-timer&tab=logs&cleared=1' ) );
+            
+            // FIX: Use wp_safe_redirect instead of wp_redirect
+            wp_safe_redirect( admin_url( 'tools.php?page=plugin-timer&tab=logs&cleared=1' ) );
             exit;
         }
     }
 
     public function register_menu() {
         add_management_page(
-            'Plugin Tester', 
-            'Plugin Tester', 
+            'Safe Activation', 
+            'Safe Activation', 
             'manage_options', 
             'plugin-timer', 
             [ $this, 'render_page' ] 
@@ -30,10 +35,12 @@ class PT_Dashboard {
     }
 
     public function render_page() {
-        $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'dashboard';
+        // FIX: Sanitize $_GET input
+        $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
+        
         ?>
         <div class="wrap">
-            <h1>⏱️ Plugin Tester & Timer</h1>
+            <h1>⏱️ Safe Activation & Timer</h1>
             
             <h2 class="nav-tab-wrapper">
                 <a href="?page=plugin-timer&tab=dashboard" class="nav-tab <?php echo $active_tab == 'dashboard' ? 'nav-tab-active' : ''; ?>">Active Timers</a>

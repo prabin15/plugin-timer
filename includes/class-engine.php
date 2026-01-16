@@ -2,7 +2,8 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class PT_Engine {
-
+    
+    // ... (Constructor remains same) ...
     public function __construct() {
         add_filter( 'plugin_action_links', [ $this, 'add_action_links' ], 10, 4 );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
@@ -17,57 +18,47 @@ class PT_Engine {
         add_action( 'init', [ $this, 'handle_sandbox_request' ] );
     }
 
-    /**
-     * The Scout: Runs inside background request
-     */
     public function handle_sandbox_request() {
+        // FIX: Verify inputs exist before use
         if ( ! isset( $_GET['pt_sandbox_check'] ) || ! isset( $_GET['pt_plugin'] ) ) return;
 
-        $plugin = sanitize_text_field( urldecode( $_GET['pt_plugin'] ) );
+        // FIX: Sanitize input
+        $plugin = sanitize_text_field( wp_unslash( $_GET['pt_plugin'] ) );
 
-        // 1. Force Errors
+        // Warning: ini_set/error_reporting are necessary evils for this sandbox feature.
+        // We can silence the linter for these specific lines if needed, or leave as is since it's intentional.
         @ini_set( 'display_errors', 1 );
         @error_reporting( E_ALL );
 
-        // 2. SHUTDOWN HANDLER
-        // If we crash, we write to a FILE, bypassing the web server entirely.
         register_shutdown_function( function() use ($plugin) {
             $error = error_get_last();
-            
             if ( $error && in_array( $error['type'], [ E_ERROR, E_PARSE, E_COMPILE_ERROR, E_CORE_ERROR ] ) ) {
                 $msg = "Fatal Error: " . $error['message'] . "\nFile: " . $error['file'] . "\nLine: " . $error['line'];
-                
-                // Write to DISK (Dead Drop)
                 $file = $this->get_crash_file_path( $plugin );
                 file_put_contents( $file, $msg );
             }
         });
 
-        // 3. Proof of Life
         add_action( 'shutdown', function() { echo ''; } );
 
-        // 4. Activate Silent
         ob_start(); 
         $result = activate_plugin( $plugin, '', false, false );
         ob_end_clean();
 
         if ( is_wp_error( $result ) ) {
-            // Write WP Error to file too
             $file = $this->get_crash_file_path( $plugin );
             file_put_contents( $file, 'WP Error: ' . $result->get_error_message() );
         }
 
-        // Cleanup
         deactivate_plugins( $plugin );
         exit;
     }
 
-    // --- MAIN LOGIC ---
-
     public function perform_pre_flight_check( $plugin ) {
-        // Clear old dead drops first
         $crash_file = $this->get_crash_file_path( $plugin );
-        if ( file_exists( $crash_file ) ) @unlink( $crash_file );
+        
+        // FIX: Use wp_delete_file instead of unlink
+        if ( file_exists( $crash_file ) ) wp_delete_file( $crash_file );
 
         $url = add_query_arg( [
             'pt_sandbox_check' => '1',
@@ -75,38 +66,34 @@ class PT_Engine {
             't' => time()
         ], home_url() );
 
-        // Short timeout (5s). If it hangs, it's a crash.
         $response = wp_remote_get( $url, [ 'timeout' => 5, 'sslverify' => false, 'cookies' => $_COOKIE ] );
 
-        // CHECK 1: Read the Dead Drop File (The most reliable source)
         if ( file_exists( $crash_file ) ) {
             $log = file_get_contents( $crash_file );
-            @unlink( $crash_file ); // Cleanup
+            // FIX: Use wp_delete_file
+            wp_delete_file( $crash_file );
             $this->log_error( $plugin, $log );
             return $log;
         }
 
-        // CHECK 2: Connection Failure?
         if ( is_wp_error( $response ) ) {
             $log = "Error: Timeout/Connection Failed.\nDetails: " . $response->get_error_message();
             $this->log_error( $plugin, $log );
             return $log;
         }
 
-        // CHECK 3: Alive Tag?
         $body = wp_remote_retrieve_body( $response );
         $is_alive = ( strpos( $body, '' ) !== false );
-        if ( $is_alive ) return true; // Safe!
+        if ( $is_alive ) return true;
 
-        // CHECK 4: Fallback
-        $preview = substr( strip_tags( $body ), 0, 500 );
+        // FIX: Use wp_strip_all_tags instead of strip_tags
+        $preview = substr( wp_strip_all_tags( $body ), 0, 500 );
         $log = "Error: Sandbox crashed silently.\nOutput: $preview";
         $this->log_error( $plugin, $log );
         return $log;
     }
 
-    // --- UTILS ---
-    
+    // ... (get_crash_file_path and log_error remain same) ...
     private function get_crash_file_path( $plugin ) {
         $upload_dir = wp_upload_dir();
         $dir = $upload_dir['basedir'] . '/pt-logs';
@@ -121,12 +108,17 @@ class PT_Engine {
         update_option( 'pt_error_logs', $logs );
     }
 
-    // --- AJAX ---
+    // --- AJAX Handlers with Sanitization Fixes ---
+
     public function ajax_test_and_activate() {
         check_ajax_referer( 'pt_nonce', 'nonce' );
         if ( ! current_user_can( 'activate_plugins' ) ) wp_send_json_error( 'Forbidden' );
-        $plugin = urldecode( $_POST['plugin'] );
-        $minutes = intval( $_POST['minutes'] );
+
+        // FIX: Sanitize input
+        $plugin = isset($_POST['plugin']) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : '';
+        $minutes = isset($_POST['minutes']) ? intval( $_POST['minutes'] ) : 0;
+
+        if ( ! $plugin ) wp_send_json_error( 'Missing plugin' );
 
         $safety = $this->perform_pre_flight_check( $plugin );
 
@@ -146,19 +138,38 @@ class PT_Engine {
 
     public function ajax_report_crash() {
         check_ajax_referer( 'pt_nonce', 'nonce' );
-        $plugin = urldecode( $_POST['plugin'] );
-        $text   = isset($_POST['error_text']) ? sanitize_textarea_field($_POST['error_text']) : 'Unknown';
         
-        // Only log if we didn't catch it server-side already
+        // FIX: Sanitize inputs
+        $plugin = isset($_POST['plugin']) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : 'unknown';
+        $text   = isset($_POST['error_text']) ? sanitize_textarea_field( wp_unslash( $_POST['error_text'] ) ) : 'Unknown';
+        
         $this->log_error( $plugin, "Client Report: $text" );
         wp_send_json_success();
     }
+    
+    // ... (Standard utils: ajax_stop_timer etc need similar sanitization fixes) ...
+    public function ajax_stop_timer() { 
+        check_ajax_referer( 'pt_nonce', 'nonce' ); 
+        $p = isset($_POST['plugin']) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : '';
+        $t = get_option('pt_active_timers', []); 
+        unset($t[$p]); 
+        update_option('pt_active_timers', $t); 
+        wp_send_json_success(); 
+    }
 
-    // ... Standard utils ...
+    public function ajax_deactivate_now() { 
+        check_ajax_referer( 'pt_nonce', 'nonce' ); 
+        $p = isset($_POST['plugin']) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : '';
+        deactivate_plugins($p); 
+        $t = get_option('pt_active_timers', []); 
+        unset($t[$p]); 
+        update_option('pt_active_timers', $t); 
+        wp_send_json_success(); 
+    }
+    
+    // Keep other methods as they were, they look fine
     public function add_action_links( $actions, $plugin_file, $plugin_data, $context ) { if ( strpos( $plugin_file, 'plugin-timer.php' ) !== false ) { array_unshift( $actions, '<a href="' . admin_url( 'tools.php?page=plugin-timer' ) . '">Settings</a>' ); } if ( is_plugin_active( $plugin_file ) ) { $timers = get_option( 'pt_active_timers', [] ); if ( isset( $timers[ $plugin_file ] ) ) { $actions['pt_settings'] = '<a href="' . admin_url( 'tools.php?page=plugin-timer' ) . '" style="color:#00a32a;font-weight:bold;">Timer Active (Settings)</a>'; } return $actions; } $slug = urlencode( $plugin_file ); $actions['timed_activate'] = '<a href="#" class="pt-trigger" data-plugin="' . esc_attr( $slug ) . '" style="color:#d63638;font-weight:bold;">Safely Timed Activate</a>'; return $actions; }
     public function enqueue_assets( $hook ) { if ( 'plugins.php' === $hook || strpos($hook, 'plugin-timer') !== false ) { wp_enqueue_style( 'pt-css', PT_URL . 'assets/style.css', [], PT_VERSION ); wp_enqueue_script( 'pt-js', PT_URL . 'assets/script.js', ['jquery'], PT_VERSION, true ); wp_localize_script( 'pt-js', 'pt_vars', [ 'ajax_url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'pt_nonce' ), 'logs_url' => admin_url( 'tools.php?page=plugin-timer&tab=logs' ) ]); } }
     public function cleanup_on_deactivation( $plugin ) { $t = get_option('pt_active_timers', []); if(isset($t[$plugin])){ unset($t[$plugin]); update_option('pt_active_timers', $t); }}
-    public function ajax_stop_timer() { check_ajax_referer( 'pt_nonce', 'nonce' ); $p=urldecode($_POST['plugin']); $t=get_option('pt_active_timers', []); unset($t[$p]); update_option('pt_active_timers', $t); wp_send_json_success(); }
-    public function ajax_deactivate_now() { check_ajax_referer( 'pt_nonce', 'nonce' ); $p=urldecode($_POST['plugin']); deactivate_plugins($p); $t=get_option('pt_active_timers', []); unset($t[$p]); update_option('pt_active_timers', $t); wp_send_json_success(); }
     public function check_expired_plugins() { $t=get_option('pt_active_timers', []); if(empty($t)) return; $d=false; foreach($t as $p=>$e){ if(time()>$e){ deactivate_plugins($p); unset($t[$p]); $d=true; }} if($d) update_option('pt_active_timers', $t); }
 }

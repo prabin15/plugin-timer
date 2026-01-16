@@ -3,7 +3,7 @@
  * Plugin Name:       Safe Activation & Timer
  * Plugin URI:        https://github.com/prabin15/plugin-timer
  * Description:       Safely activate plugins with Pre-Flight Crash Checks and Automatic Timers.
- * Version:           2.2.0
+ * Version:           2.5.0
  * Author:            Prabin Regmi
  * License:           GPL v2 or later
  * Text Domain:       plugin-timer

@@ -1,4 +1,6 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 $logs = get_option( 'pt_error_logs', [] );
 $is_cleared = isset( $_GET['cleared'] );
 ?>
@@ -8,6 +10,7 @@ $is_cleared = isset( $_GET['cleared'] );
         <h3>⚠️ Crash Reports</h3>
         <?php if ( !empty( $logs ) ) : ?>
         <form method="post" action="">
+             <?php wp_nonce_field( 'pt_clear_logs_action', 'pt_clear_logs_nonce' ); ?>
              <button type="submit" name="pt_clear_logs" value="1" class="button button-secondary">Clear Logs</button>
         </form>
         <?php endif; ?>
@@ -31,13 +34,14 @@ $is_cleared = isset( $_GET['cleared'] );
                 $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_slug );
                 $plugin_name = $plugin_data['Name'];
             }
-            $time_string = date( 'M j, Y - g:i a', $log['time'] );
+            // FIX: Use wp_date or gmdate instead of date()
+            $time_string = wp_date( 'M j, Y - g:i a', $log['time'] );
         ?>
         
         <div style="background: #fff; border: 1px solid #ccd0d4; border-left: 4px solid #d63638; border-radius: 4px; margin-bottom: 15px; box-shadow: 0 1px 1px rgba(0,0,0,.04);">
             <div style="padding: 10px 15px; background: #f6f7f7; border-bottom: 1px solid #ccd0d4; display:flex; justify-content:space-between;">
                 <strong>🚨 <?php echo esc_html( $plugin_name ); ?></strong>
-                <span style="color: #646970; font-size: 12px;"><?php echo $time_string; ?></span>
+                <span style="color: #646970; font-size: 12px;"><?php echo esc_html( $time_string ); ?></span>
             </div>
             <div style="padding: 15px;">
                 <p style="margin-top:0; font-weight:600; color:#1d2327;">Error Output:</p>

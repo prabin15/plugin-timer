@@ -1,30 +1,43 @@
 <?php
+// FIX: Prevent direct file access
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 $timers = get_option( 'pt_active_timers', [] );
 ?>
+
 <div class="pt-card">
+    <h3>⏳ Active Plugin Timers</h3>
+    
     <?php if ( empty( $timers ) ) : ?>
-        <p>No active timers. Go to the <a href="plugins.php">Plugins</a> page to start one.</p>
+        <p>No active timers. Activate a plugin with a timer to see it here.</p>
     <?php else : ?>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th>Plugin</th><th>Status</th><th>Time Remaining</th><th>Actions</th>
+                    <th>Plugin</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ( $timers as $plugin_slug => $expiry ) : 
-                    $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_slug );
-                    $name = $plugin_data['Name'] ? $plugin_data['Name'] : $plugin_slug;
-                    $minutes_left = round( ($expiry - time()) / 60 );
-                    $slug_attr = urlencode($plugin_slug);
+                <?php foreach ( $timers as $plugin => $expiry ) : 
+                    $minutes_left = ceil( ( $expiry - time() ) / 60 );
+                    $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin );
+                    $name = $plugin_data['Name'];
+                    $slug = urlencode( $plugin );
+                    
+                    // FIX: Escape all output variables
+                    $slug_attr = esc_attr( $slug );
                 ?>
                 <tr>
                     <td><strong><?php echo esc_html( $name ); ?></strong></td>
-                    <td><span class="pt-badge-active">Active</span></td>
-                    <td><?php echo $minutes_left > 0 ? "Closing in <strong>$minutes_left mins</strong>" : "Closing soon..."; ?></td>
                     <td>
-                        <button class="button pt-stop-timer" data-plugin="<?php echo $slug_attr; ?>">🚫 Remove Timer</button>
-                        <button class="button button-link-delete pt-deactivate-now" data-plugin="<?php echo $slug_attr; ?>">Deactivate Now</button>
+                        <span class="pt-badge pt-active">Active</span>
+                        Closing in <strong><?php echo intval( $minutes_left ); ?> mins</strong>
+                    </td>
+                    <td>
+                        <button class="button pt-stop-timer" data-plugin="<?php echo $slug_attr; ?>">Stop Timer (Keep Active)</button>
+                        <button class="button pt-deactivate-now" data-plugin="<?php echo $slug_attr; ?>">Deactivate Now</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>

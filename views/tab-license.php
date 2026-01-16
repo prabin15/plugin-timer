@@ -1,3 +1,4 @@
+<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
 <div class="pt-card">
     <h3>📜 License & Usage Rights</h3>
     <p><strong>Plugin Tester & Activation Timer</strong> is free software distributed under the terms of the GNU General Public License version 2 (GPLv2).</p>
