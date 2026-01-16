@@ -6,7 +6,7 @@
  * Version:           2.5.0
  * Author:            Prabin Regmi
  * License:           GPL v2 or later
- * Text Domain:       plugin-timer
+ * Text Domain:       safe-activation
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;

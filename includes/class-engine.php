@@ -70,7 +70,6 @@ class PT_Engine {
 
         if ( file_exists( $crash_file ) ) {
             $log = file_get_contents( $crash_file );
-            // FIX: Use wp_delete_file
             wp_delete_file( $crash_file );
             $this->log_error( $plugin, $log );
             return $log;
