@@ -9,16 +9,18 @@ class PT_Dashboard {
     }
 
     public function handle_clear_logs() {
-        // FIX: Verify Nonce
+        // FIX: Verify logic for Line 14 Warning
+        // We add this comment to tell the scanner we will verify the nonce INSIDE the block
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         if ( isset( $_POST['pt_clear_logs'] ) && current_user_can( 'manage_options' ) ) {
             
-            if ( ! isset( $_POST['pt_clear_logs_nonce'] ) || ! wp_verify_nonce( $_POST['pt_clear_logs_nonce'], 'pt_clear_logs_action' ) ) {
+            // Security: Verify Nonce immediately inside the block
+            if ( ! isset( $_POST['pt_clear_logs_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['pt_clear_logs_nonce'] ) ), 'pt_clear_logs_action' ) ) {
                 wp_die( 'Security check failed' );
             }
 
             delete_option( 'pt_error_logs' );
             
-            // FIX: Use wp_safe_redirect instead of wp_redirect
             wp_safe_redirect( admin_url( 'tools.php?page=plugin-timer&tab=logs&cleared=1' ) );
             exit;
         }
@@ -35,8 +37,15 @@ class PT_Dashboard {
     }
 
     public function render_page() {
-        // FIX: Sanitize $_GET input
-        $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
+        // FIX: Warning for Line 33
+        $active_tab = 'dashboard';
+        
+        // 1. Ignore Nonce warning (tabs are just navigation links, not form submissions)
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( isset( $_GET['tab'] ) ) {
+            // 2. Explicitly unslash and sanitize to fix "MissingUnslash" error
+            $active_tab = sanitize_text_field( wp_unslash( $_GET['tab'] ) );
+        }
         
         ?>
         <div class="wrap">

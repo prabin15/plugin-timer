@@ -1,14 +1,19 @@
 <?php
+// Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 $logs = get_option( 'pt_error_logs', [] );
+
+// FIX 1: Add this comment to silence the "Nonce Verification" warning.
+// Since we are only checking a flag to show a message (not deleting anything), this is safe.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $is_cleared = isset( $_GET['cleared'] );
 ?>
 
 <div class="pt-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h3>⚠️ Crash Reports</h3>
-        <?php if ( !empty( $logs ) ) : ?>
+        <?php if ( ! empty( $logs ) ) : ?>
         <form method="post" action="">
              <?php wp_nonce_field( 'pt_clear_logs_action', 'pt_clear_logs_nonce' ); ?>
              <button type="submit" name="pt_clear_logs" value="1" class="button button-secondary">Clear Logs</button>
@@ -30,11 +35,13 @@ $is_cleared = isset( $_GET['cleared'] );
         <?php foreach ( $logs as $log ) : 
             $plugin_slug = $log['plugin'];
             $plugin_name = $plugin_slug; 
+            
             if ( file_exists( WP_PLUGIN_DIR . '/' . $plugin_slug ) ) {
                 $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_slug );
                 $plugin_name = $plugin_data['Name'];
             }
-            // FIX: Use wp_date or gmdate instead of date()
+
+            // FIX 2: Use wp_date() instead of date() to fix "Timezone" error
             $time_string = wp_date( 'M j, Y - g:i a', $log['time'] );
         ?>
         
