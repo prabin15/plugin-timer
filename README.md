@@ -1,10 +1,20 @@
-# 🛡️ Plugin Tester & Activation Timer
+# 🛡️ Safe Activation & Timer
 
 ![License](https://img.shields.io/badge/License-GPLv2-blue.svg) ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue.svg) ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
 
-**Stop guessing. Test before you Activate.**
+> **Status:** Pending Review on WordPress.org. You can download the manual version below.
 
-Plugin Tester prevents the "White Screen of Death" by running a background simulation (Pre-Flight Check) on any plugin you try to activate. If the plugin causes a Fatal Error, Syntax Error, or Memory Exhaustion, we block it and log the error.
+
+
+## 📥 Download
+
+You can download the latest version directly from GitHub:
+
+[**Download ZIP (v2.2.0)**](https://github.com/prabin15/plugin-timer/releases/download/v2.2.0/Plugin-timer.zip)
+
+*Note: This version requires manual installation. Go to Plugins > Add New > Upload Plugin.*
+
+---
 
 
 
