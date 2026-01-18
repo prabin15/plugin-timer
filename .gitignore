@@ -1,35 +1,39 @@
-# WordPress Core & Config
-wp-config.php
-wp-content/uploads/
-wp-content/upgrade/
-wp-content/cache/
-
-# Ignore our plugin's specific log folder (IMPORTANT)
-# We don't want to commit crash reports to the repo
-/logs/
-/pt-logs/
-wp-content/uploads/pt-logs/
-
-# IDE & OS Files
-.idea/
-.vscode/
+# Operating System Files
 .DS_Store
 Thumbs.db
-*.log
-*.tmp
+Desktop.ini
 
-# Packages
+# IDE & Editor Configuration
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+
+# Logs & Debugging
+*.log
+error_log
+debug.log
+php_error.log
+
+# The Plugin's "Dead Drop" logs (just in case they end up here)
+pt-logs/
+crash-reports/
+
+# Archives (IMPORTANT: Don't commit your release zips!)
+*.zip
+*.tar.gz
+*.rar
+
+# Dependencies (If you add Composer or NPM later)
 node_modules/
 vendor/
 package-lock.json
-yarn.lock
 composer.lock
 
-# Build files (if you add build steps later)
-assets/*.min.js
-assets/*.min.css
+# WordPress.org SVN folders
+.svn/
 
-# Local Development / Crash Test Dummy
-# Don't commit the crash test plugin itself
-crash-test/
+# Local Crash Test Dummies (If you put them inside the plugin folder)
+crash-tests/
 crash-suite/

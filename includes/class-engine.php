@@ -17,38 +17,28 @@ class PT_Engine {
         add_action( 'init', [ $this, 'handle_sandbox_request' ] );
     }
 
-    /**
-     * 🕵️‍♀️ The Scout: Runs inside background request
-     */
     public function handle_sandbox_request() {
-        // FIX: Verify inputs exist before use
         if ( ! isset( $_GET['pt_sandbox_check'] ) || ! isset( $_GET['pt_plugin'] ) ) {
             return;
         }
 
-        // FIX: Nonce Verification
-        // We look for the nonce passed from perform_pre_flight_check
         if ( ! isset( $_GET['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['nonce'] ) ), 'pt_scout_check' ) ) {
             return;
         }
 
-        // FIX: Sanitize input and unslash
         $plugin = sanitize_text_field( wp_unslash( $_GET['pt_plugin'] ) );
 
-        // Force Errors to be visible (Required for Dead Drop)
-        // phpcs:ignore WordPress.PHP.DiscouragedFunctions.Discouraged, WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_ini_set
+        // Force Errors (Required for Dead Drop)
+        // phpcs:ignore
         @ini_set( 'display_errors', 1 );
         
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_error_reporting
+        // phpcs:ignore
         @error_reporting( E_ALL );
 
-        // SHUTDOWN HANDLER (The Dead Drop)
         register_shutdown_function( function() use ($plugin) {
             $error = error_get_last();
-            
             if ( $error && in_array( $error['type'], [ E_ERROR, E_PARSE, E_COMPILE_ERROR, E_CORE_ERROR ] ) ) {
                 $msg = "Fatal Error: " . $error['message'] . "\nFile: " . $error['file'] . "\nLine: " . $error['line'];
-                
                 $file = $this->get_crash_file_path( $plugin );
                 file_put_contents( $file, $msg );
             }
@@ -56,7 +46,6 @@ class PT_Engine {
 
         add_action( 'shutdown', function() { echo ''; } );
 
-        // Activate Silent
         ob_start(); 
         $result = activate_plugin( $plugin, '', false, false );
         ob_end_clean();
@@ -70,57 +59,45 @@ class PT_Engine {
         exit;
     }
 
-    // --- MAIN LOGIC ---
-
     public function perform_pre_flight_check( $plugin ) {
         $crash_file = $this->get_crash_file_path( $plugin );
         
-        // FIX: Use wp_delete_file instead of unlink
         if ( file_exists( $crash_file ) ) {
             wp_delete_file( $crash_file );
         }
 
-        // FIX: Add Nonce to the URL so the scout can verify it
         $url = add_query_arg( [
             'pt_sandbox_check' => '1',
-            'pt_plugin'        => urlencode( $plugin ),
+            'pt_plugin'        => $plugin, 
             'nonce'            => wp_create_nonce( 'pt_scout_check' ),
             't'                => time()
         ], home_url() );
 
         $response = wp_remote_get( $url, [ 'timeout' => 5, 'sslverify' => false, 'cookies' => $_COOKIE ] );
 
-        // CHECK 1: Read the Dead Drop File
         if ( file_exists( $crash_file ) ) {
             $log = file_get_contents( $crash_file );
-            // FIX: Use wp_delete_file
             wp_delete_file( $crash_file );
             $this->log_error( $plugin, $log );
             return $log;
         }
 
-        // CHECK 2: Connection Failure?
         if ( is_wp_error( $response ) ) {
             $log = "Error: Timeout/Connection Failed.\nDetails: " . $response->get_error_message();
             $this->log_error( $plugin, $log );
             return $log;
         }
 
-        // CHECK 3: Alive Tag?
         $body = wp_remote_retrieve_body( $response );
         $is_alive = ( strpos( $body, '' ) !== false );
-        if ( $is_alive ) return true; // Safe!
+        if ( $is_alive ) return true;
 
-        // CHECK 4: Fallback
-        // FIX: Use wp_strip_all_tags instead of strip_tags
         $preview = substr( wp_strip_all_tags( $body ), 0, 500 );
         $log = "Error: Sandbox crashed silently.\nOutput: $preview";
         $this->log_error( $plugin, $log );
         return $log;
     }
 
-    // --- UTILS ---
-    
     private function get_crash_file_path( $plugin ) {
         $upload_dir = wp_upload_dir();
         $dir = $upload_dir['basedir'] . '/pt-logs';
@@ -135,13 +112,10 @@ class PT_Engine {
         update_option( 'pt_error_logs', $logs );
     }
 
-    // --- AJAX ---
-    
     public function ajax_test_and_activate() {
         check_ajax_referer( 'pt_nonce', 'nonce' );
         if ( ! current_user_can( 'activate_plugins' ) ) wp_send_json_error( 'Forbidden' );
         
-        // FIX: Sanitize, Unslash, and Check Existence
         $plugin  = isset( $_POST['plugin'] ) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : '';
         $minutes = isset( $_POST['minutes'] ) ? intval( $_POST['minutes'] ) : 0;
 
@@ -168,22 +142,15 @@ class PT_Engine {
 
     public function ajax_report_crash() {
         check_ajax_referer( 'pt_nonce', 'nonce' );
-        
-        // FIX: Sanitize, Unslash, and Check Existence
         $plugin = isset( $_POST['plugin'] ) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : 'unknown';
         $text   = isset( $_POST['error_text'] ) ? sanitize_textarea_field( wp_unslash( $_POST['error_text'] ) ) : 'Unknown';
-        
-        // Only log if we didn't catch it server-side already
         $this->log_error( $plugin, "Client Report: $text" );
         wp_send_json_success();
     }
 
     public function ajax_stop_timer() {
         check_ajax_referer( 'pt_nonce', 'nonce' );
-        
-        // FIX: Sanitize
         $p = isset( $_POST['plugin'] ) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : '';
-        
         if ( $p ) {
             $t = get_option('pt_active_timers', []);
             unset($t[$p]);
@@ -194,10 +161,7 @@ class PT_Engine {
 
     public function ajax_deactivate_now() {
         check_ajax_referer( 'pt_nonce', 'nonce' );
-        
-        // FIX: Sanitize
         $p = isset( $_POST['plugin'] ) ? sanitize_text_field( wp_unslash( $_POST['plugin'] ) ) : '';
-        
         if ( $p ) {
             deactivate_plugins($p);
             $t = get_option('pt_active_timers', []);
@@ -210,7 +174,6 @@ class PT_Engine {
     public function check_expired_plugins() {
         $t = get_option('pt_active_timers', []);
         if ( empty( $t ) ) return;
-        
         $d = false;
         foreach ( $t as $p => $e ) {
             if ( time() > $e ) {
@@ -221,8 +184,6 @@ class PT_Engine {
         }
         if ( $d ) update_option( 'pt_active_timers', $t );
     }
-
-    // --- ASSETS & LINKS ---
 
     public function add_action_links( $actions, $plugin_file, $plugin_data, $context ) {
         if ( strpos( $plugin_file, 'plugin-timer.php' ) !== false ) {
@@ -235,8 +196,9 @@ class PT_Engine {
             }
             return $actions;
         }
-        $slug = urlencode( $plugin_file );
-        // FIX: Escape Attribute
+        
+        $slug = $plugin_file; 
+        
         $actions['timed_activate'] = '<a href="#" class="pt-trigger" data-plugin="' . esc_attr( $slug ) . '" style="color:#d63638;font-weight:bold;">Safely Timed Activate</a>';
         return $actions;
     }

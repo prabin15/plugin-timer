@@ -1,72 +1,68 @@
 jQuery(document).ready(function($) {
-    
-    // 1. HIJACK DEFAULT ACTIVATE LINKS
+
+    // --- 1. VISUALS: Rename "Activate" to "Safely Activate" ---
     $('.plugins .activate a').each(function() {
         var $link = $(this);
+        // Only hijack if it's a real activation link
+        if ($link.attr('href') && $link.attr('href').indexOf('action=activate') !== -1) {
+            $link.html('🛡️ Safely Activate');
+            $link.css('font-weight', 'bold').css('color', '#135e96');
+        }
+    });
+
+    // --- 2. INTERCEPT STANDARD ACTIVATE CLICKS ---
+    // We target the .activate class specifically
+    $(document).on('click', '.plugins .activate a', function(e) {
+        var $link = $(this);
         var url = $link.attr('href');
-        
-        $link.html('🛡️ Safely Activate');
-        $link.css('font-weight', 'bold').css('color', '#135e96');
 
-        $link.on('click', function(e) {
-            e.preventDefault();
-            var match = url.match(/plugin=([^&]+)/);
-            if (!match) { window.location = url; return; }
-            var pluginSlug = decodeURIComponent(match[1]);
+        // Verify it's an activation link
+        if (!url || url.indexOf('action=activate') === -1) return;
 
-            $link.text('Testing...').css('opacity', '0.6').css('pointer-events', 'none');
-
-            // Send "0" minutes = Forever
-            performActivation(pluginSlug, 0, $link, function() {
-                $link.text('✓ Safe! Reloading...');
-                window.location.reload();
-            });
-        });
-    });
-
-    // 2. POPUP LOGIC
-    var popupHTML = `
-        <div id="pt-overlay" style="display:none;">
-            <div id="pt-modal">
-                <div class="pt-icon">⏱️</div>
-                <h3>Safely Timed Activate</h3>
-                <p>We will test the plugin first. If safe, it stays on for:</p>
-                <div class="pt-grid">
-                    <button class="pt-btn" data-time="15">15 Mins</button>
-                    <button class="pt-btn" data-time="30">30 Mins</button>
-                    <button class="pt-btn" data-time="60">1 Hour</button>
-                    <button class="pt-btn" data-time="240">4 Hours</button>
-                    <button class="pt-btn" data-time="1440">24 Hours</button>
-                </div>
-                <button id="pt-cancel">Cancel</button>
-            </div>
-        </div>
-    `;
-    $('body').append(popupHTML);
-
-    var selectedPlugin = '';
-
-    $('.pt-trigger').on('click', function(e) {
         e.preventDefault();
-        selectedPlugin = $(this).data('plugin');
-        $('#pt-overlay').fadeIn(200);
-    });
 
-    $('.pt-btn').on('click', function() {
-        var minutes = $(this).data('time');
-        var $btn = $(this);
-        $('.pt-btn').prop('disabled', true).css('opacity', '0.5');
-        $btn.text('Testing...');
+        // Extract Plugin Slug from URL
+        var match = url.match(/plugin=([^&]+)/);
+        var plugin = match ? decodeURIComponent(match[1]) : null;
 
-        performActivation(selectedPlugin, minutes, $btn, function() {
-            window.location.reload();
+        if (!plugin) {
+            window.location = url; // Fallback to normal if we can't find slug
+            return;
+        }
+
+        // Show Loading State
+        $link.text('Checking...').css('opacity', '0.6').css('pointer-events', 'none');
+
+        // Run Safety Check (0 minutes = Forever)
+        performActivation(plugin, 0, $link, function() {
+            $link.text('✓ Safe! Activating...');
+            window.location = url; // Proceed with standard WP activation
         });
     });
 
-    $('#pt-cancel').on('click', function() { $('#pt-overlay').fadeOut(); });
+    // --- 3. HANDLE "TIMED ACTIVATE" BUTTONS ---
+    $(document).on('click', '.pt-trigger', function(e) {
+        e.preventDefault();
+        var plugin = $(this).data('plugin');
+        var $row = $(this).closest('tr');
 
-    // 3. SHARED ACTIVATION LOGIC (Trojan Horse Handler)
+        // Simple Prompt for Duration
+        var minutes = prompt("⏱️ Safe Activation Timer\n\nHow many minutes should this plugin stay active?\n(Enter 0 for permanent activation)", "30");
+        
+        if (minutes === null) return; // Cancelled
+        minutes = parseInt(minutes);
+        if (isNaN(minutes)) minutes = 30;
+
+        performActivation(plugin, minutes, $row, function() {
+             window.location.reload(); // Reload to show active state
+        });
+    });
+
+    // --- 4. MASTER ACTIVATION LOGIC ---
     function performActivation(plugin, minutes, $uiElement, successCallback) {
+        // Global Cursor Wait
+        $('body').css('cursor', 'wait');
+
         $.ajax({
             url: pt_vars.ajax_url,
             type: 'POST',
@@ -77,90 +73,108 @@ jQuery(document).ready(function($) {
                 nonce: pt_vars.nonce
             },
             success: function(response) {
-                // SUCCESS SCENARIO 1: Normal Activation
-                if(response.success) {
-                    successCallback();
-                } 
-                // FAILURE SCENARIO 1: Trojan Horse Crash (200 OK but contains crash data)
-                else if (response.is_crash_report) {
-                     console.log('Plugin Timer: Trojan Horse Crash Detected');
-                     reportCrash(plugin, '200 (Trojan)', response.data, function() {
-                        handleUIReset($uiElement);
-                        showBlockedPopup();
-                     });
+                $('body').css('cursor', 'default');
+                
+                // RESTORE UI
+                if($uiElement.hasClass('pt-trigger')) {
+                    // It was a row action link
+                    $uiElement.css('opacity', '1');
+                } else {
+                    // It was the main activate button
+                     $uiElement.css('opacity', '1').css('pointer-events', 'auto');
                 }
-                // FAILURE SCENARIO 2: Standard PHP Logic Block
-                else {
-                    handleUIReset($uiElement);
-                    showBlockedPopup();
+
+                if (response.success) {
+                    // SAFE!
+                    successCallback();
+                } else {
+                    // CRASH DETECTED!
+                    // Reset text if it was the main button
+                    if (!$uiElement.hasClass('pt-trigger')) {
+                         $uiElement.html('🛡️ Safely Activate');
+                    }
+                    
+                    var errorMsg = response.data || "Unknown Error";
+                    reportCrash(plugin, errorMsg);
                 }
             },
             error: function(xhr, status, error) {
-                // FAILURE SCENARIO 3: Hard Timeout or Network Error
-                console.log('Plugin Timer: AJAX Died (Hard Fail).');
+                // HARD SERVER FAILURE (500)
+                $('body').css('cursor', 'default');
+                if (!$uiElement.hasClass('pt-trigger')) {
+                     $uiElement.html('🛡️ Safely Activate').css('opacity', '1').css('pointer-events', 'auto');
+                }
+
+                var msg = "Critical Server Failure (500).";
+                if(xhr.responseText) msg = xhr.responseText.substring(0, 500);
                 
-                var crashDetails = xhr.responseText || error || "Unknown Fatal Error";
-                // Strip HTML tags if we got a raw page back
-                var cleanText = crashDetails.replace(/<[^>]*>?/gm, '');
-                if (cleanText.length > 800) cleanText = cleanText.substring(0, 800) + '...';
-
-                reportCrash(plugin, xhr.status, cleanText, function() {
-                    handleUIReset($uiElement);
-                    showBlockedPopup();
-                });
+                reportCrash(plugin, msg);
             }
         });
     }
 
-    // NEW: Client-Side Crash Reporter
-    function reportCrash(plugin, status, errorText, callback) {
-        $.ajax({
-            url: pt_vars.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'pt_report_crash',
-                plugin: plugin,
-                status: status,
-                error_text: errorText,
-                nonce: pt_vars.nonce
-            },
-            complete: function() {
-                // We don't care if this succeeds or fails, just run callback
-                if (typeof callback === 'function') callback();
-            }
+    // --- 5. DASHBOARD BUTTONS (FIXED) ---
+    // Bug Fix: We now reload the page on success to prevent the row from "reappearing"
+    
+    // Stop Timer
+    $(document).on('click', '.pt-stop-timer', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var plugin = btn.data('plugin');
+        
+        if(!confirm('Stop the timer? The plugin will remain active.')) return;
+        
+        btn.text('Processing...').prop('disabled', true);
+        
+        $.post(pt_vars.ajax_url, {
+            action: 'pt_stop_timer',
+            plugin: plugin,
+            nonce: pt_vars.nonce
+        }, function(res) {
+            window.location.reload();
         });
-    }
+    });
 
-    function handleUIReset($uiElement) {
-        $('#pt-overlay').fadeOut();
-        if($uiElement.hasClass('pt-btn')) {
-            $('.pt-btn').prop('disabled', false).css('opacity', '1');
-            $uiElement.text('Try Again');
-        } else {
-            $uiElement.text('🛡️ Safely Activate').css('opacity', '1').css('pointer-events', 'auto');
-        }
-    }
+    // Deactivate Now
+    $(document).on('click', '.pt-deactivate-now', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var plugin = btn.data('plugin');
 
-    function showBlockedPopup() {
-        var errorHTML = `
-            <div id="pt-error-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:100001; display:flex; justify-content:center; align-items:center;">
-                <div style="background:#fff; padding:30px; border-radius:8px; width:500px; box-shadow:0 10px 25px rgba(0,0,0,0.5); text-align:center;">
-                    <div style="font-size:50px; margin-bottom:20px;">🚫</div>
-                    <h2 style="color:#d63638; margin-top:0;">Activation Blocked</h2>
-                    <p><strong>Safe Mode</strong> prevented a critical crash.</p>
-                    <p>Details saved to Error Log.</p>
-                    <div style="margin-top:25px;">
-                        <a href="${pt_vars.logs_url}" class="button button-primary button-large">View Error Logs</a>
-                        <button id="pt-close-error" class="button button-secondary button-large" style="margin-left:10px;">Close</button>
+        if(!confirm('Deactivate this plugin immediately?')) return;
+        
+        btn.text('Processing...').prop('disabled', true);
+        
+        $.post(pt_vars.ajax_url, {
+            action: 'pt_deactivate_now',
+            plugin: plugin,
+            nonce: pt_vars.nonce
+        }, function(res) {
+            window.location.reload();
+        });
+    });
+
+    // --- 6. CRASH POPUP ---
+    function reportCrash(plugin, details) {
+        // Remove existing if any
+        $('#pt-crash-modal').remove();
+
+        var html = `
+            <div id="pt-crash-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; justify-content:center; align-items:center;">
+                <div style="background:#fff; width:90%; max-width:600px; padding:30px; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,0.5); font-family:sans-serif; text-align:left;">
+                    <h2 style="color:#d63638; margin-top:0;">🚫 Activation Blocked</h2>
+                    <p><strong>Safe Mode</strong> prevented a fatal crash on your site.</p>
+                    <div style="background:#f6f7f7; padding:15px; border-left:4px solid #d63638; margin:20px 0; overflow:auto; max-height:200px; font-family:monospace; font-size:12px;">
+                        ${details.replace(/\n/g, '<br>')}
+                    </div>
+                    <div style="text-align:right;">
+                        <a href="${pt_vars.logs_url}" class="button button-secondary">View Full Logs</a>
+                        <button class="button button-primary button-large" onclick="document.getElementById('pt-crash-modal').remove()">Acknowledge & Close</button>
                     </div>
                 </div>
             </div>
         `;
-        $('body').append(errorHTML);
-        $('#pt-close-error').on('click', function() { $('#pt-error-overlay').remove(); });
+        $('body').append(html);
     }
 
-    // Dashboard Actions (Keep existing)
-    $(document).on('click', '.pt-stop-timer', function(e) { e.preventDefault(); var p=$(this).data('plugin'), r=$(this).closest('tr'); if(!confirm('Remove timer?'))return; $.post(pt_vars.ajax_url, {action:'pt_stop_timer', plugin:p, nonce:pt_vars.nonce}, function(res){ if(res.success) r.fadeOut(300,function(){$(this).remove()}); }); });
-    $(document).on('click', '.pt-deactivate-now', function(e) { e.preventDefault(); var p=$(this).data('plugin'), r=$(this).closest('tr'); $(this).text('...'); $.post(pt_vars.ajax_url, {action:'pt_deactivate_now', plugin:p, nonce:pt_vars.nonce}, function(res){ if(res.success) r.css('background','#ffcccc').fadeOut(500,function(){$(this).remove()}); }); });
 });
