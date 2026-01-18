@@ -73,3 +73,8 @@ The plugin "hijacks" the standard link for your safety. However, you can always 
 
 = 2.2.0 =
 Major Update: Added "Dead Drop" logging to capture fatal errors that previously caused empty log files.
+
+== Upgrade Notice ==
+
+= 2.5.0 =
+Major Update: Fixed bugs and added new features.
