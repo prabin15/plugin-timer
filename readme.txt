@@ -1,80 +1,63 @@
 === Safe Activation & Timer ===
-Contributors: prabinregmi
-Tags: debug, fatal error, crash protection, security, maintenance
+Contributors: prabin15
+Tags: plugins, safety, crash protection, timer, sandbox, debugging
 Requires at least: 5.8
 Tested up to: 6.9
 Stable tag: 2.5.0
 Requires PHP: 7.4
 License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Prevent the White Screen of Death. Test plugins for fatal errors before activating and set auto-deactivation timers.
+Safely activate plugins with Pre-Flight Crash Checks (Fatal Error Protection) and set automatic deactivation timers.
 
 == Description ==
 
-**Activating a broken tool is the #1 cause of the "White Screen of Death."**
+**Stop breaking your site when activating plugins.**
 
-Whether it's a syntax error, memory exhaustion, or a PHP conflict, one bad click can take your site offline. **Safe Activation & Timer** adds a "Pre-Flight Check" to your workflow.
+Safe Activation & Timer replaces the standard "Activate" link with a smart **"Safely Activate"** workflow. Before a plugin is allowed to run on your live site, it passes through a sandboxed "Scout" process that checks for fatal errors, syntax crashes, and memory exhaustion.
 
-**🚀 FEATURES**
+**New in 2.5.0: Snapshot & Restore Engine**
+We now capture a database snapshot before every activation. If a plugin crashes PHP completely (White Screen of Death), the system blindly restores the safe snapshot, guaranteeing your site stays online.
 
-* **🛡️ Safely Activate (The Crash Guard)**
-    We replace the standard activation link with a smart "Safely Activate" button. It launches a background "Scout" request to test the tool.
-    * **If it crashes:** The activation is blocked instantly. Your live site stays online.
-    * **If it's safe:** It activates immediately.
+**Key Features:**
 
-* **📝 Dead Drop Logging**
-    Standard server logs often miss critical crashes. Our "Dead Drop" technology writes fatal errors directly to a temporary disk file the millisecond a crash occurs, ensuring you see the *exact* error message (File, Line, and Stack Trace) even if the server times out.
+* **🛡️ Pre-Flight Checks:** Detects Fatal Errors, Parse Errors, and "Delayed Bombs" (crashes on `init`).
+* **⏱️ Auto-Deactivation Timers:** Activate a plugin for 15 minutes, 1 hour, or 24 hours. It turns itself off automatically.
+* **📸 Crash Protection:** Prevents WSOD (White Screen of Death) by reverting the database state immediately upon failure.
+* **📝 Error Logging:** Captures the exact file, line number, and error message of the crash.
+* **⚠️ Force Activation:** An "Activate Anyway" option for developers who need to debug the crash live.
 
-* **⏱️ Safely Timed Activate**
-    Perfect for debugging. Activate heavy tools (like Query Monitor or Migrators) for **15 mins, 1 hour, or 4 hours**. The system automatically deactivates them when time is up, keeping your site fast.
+**Perfect For:**
 
-* **⚠️ Crash Report Dashboard**
-    View a history of blocked attempts and the specific errors they caused in **Tools > Safe Timer**.
+* Testing new/unstable plugins.
+* Debugging live sites (enable a debug plugin for just 30 mins).
+* Granting temporary feature access to clients.
 
 == Installation ==
 
-1.  Upload the folder to the `/wp-content/plugins/` directory.
-2.  Activate the plugin.
-3.  Navigate to the **Plugins** list to see the new **Safely Activate** buttons.
+1.  Upload the plugin files to the `/wp-content/plugins/plugin-timer` directory, or install the plugin through the WordPress plugins screen directly.
+2.  Activate the plugin through the 'Plugins' screen in WordPress.
+3.  Go to the Plugins list; you will see "Safely Activate" links instead of the standard Activate links.
 
 == Frequently Asked Questions ==
 
-= Does this work on LocalWP / XAMPP? =
-Yes. We have optimized the crash detection to work on local environments where timeouts are frequent.
+= Does this work with all plugins? =
+Yes. It intercepts the standard WordPress activation process.
 
-= Where are the crash logs stored? =
-Temporary crash files are written to `/wp-content/uploads/pt-logs/`. They are automatically cleaned up after reading.
+= What happens if a plugin crashes the checker? =
+The plugin uses a "Dead Drop" system. If the checker dies, it writes the error to disk and forces a database rollback. You will see a "Activation Blocked" popup with the error details.
 
-= Can I use the normal Activate button? =
-The plugin "hijacks" the standard link for your safety. However, you can always use "Bulk Actions > Activate" to bypass our checks (not recommended).
-
-== Screenshots ==
-
-1.  **Safely Activate:** The new buttons added to your plugin list.
-2.  **Crash Blocked:** The popup alert preventing a fatal error.
-3.  **Error Logs:** The detailed crash report showing the exact file and line number.
-4.  **Timer Selection:** Choosing a 30-minute duration for a debugging tool.
+= Can I use this on a production site? =
+Yes! That is exactly what it is designed for. It protects your production site from going down due to a bad plugin update or activation.
 
 == Changelog ==
 
-= 2.2.0 =
-* Added "Dead Drop" logging system for hard crashes.
-* Fixed Nginx 500 error masking.
-
-= 2.1.0 =
-* Added "Error Logs" tab.
-* Renamed for clarity.
-
-= 1.0.0 =
-* Initial release.
-
-== Upgrade Notice ==
-
-= 2.2.0 =
-Major Update: Added "Dead Drop" logging to capture fatal errors that previously caused empty log files.
-
-== Upgrade Notice ==
-
 = 2.5.0 =
-Major Update: Fixed bugs and added new features.
+* **Major:** Implemented "Snapshot & Restore" engine for robust crash recovery.
+* **Fix:** Added detection for "Delayed Bombs" (crashes on `init` hook).
+* **Fix:** Added "Activate Anyway" option for developers.
+* **Fix:** Compliance updates (Sanitization, Nonces, and `wp_delete_file`).
+* **UI:** Improved Dashboard and Timer management.
+
+= 2.0.0 =
+* Initial Release of the Timer and Crash Check features.

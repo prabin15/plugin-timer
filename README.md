@@ -1,8 +1,8 @@
-# 🛡️ Safe Activation & Timer
+# 🛡️ Safe Activation & Timer for WordPress
 
-![License](https://img.shields.io/badge/License-GPLv2-blue.svg) ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue.svg) ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)
+**Stop breaking your site when activating plugins.**
 
-> **Status:** Pending Review on WordPress.org. You can download the manual version below.
+Safe Activation & Timer replaces the standard WordPress "Activate" link with a smart **"Safely Activate"** workflow. It runs a background "Scout" process to test plugins for fatal errors before they are allowed to load on your live site.
 
 
 
@@ -18,63 +18,56 @@ You can download the latest version directly from GitHub:
 
 
 
-## 🚀 Key Features
+## 🚀 Features
 
-### 1. The "Dead Drop" Safety System
-Most safety plugins fail because when PHP crashes, the logging system crashes too. We solved this.
-* **How it works:** We register a `shutdown_function` that detects fatal errors.
-* **The Drop:** Before the process dies, we write the error details to a `.txt` file in `wp-content/uploads`.
-* **The Retrieval:** The dashboard reads this file to display the error, bypassing server 500 pages completely.
+### 1. Crash Protection (The Scout)
+Before a plugin activates, we run a sandboxed test that checks for:
+* **Fatal Errors:** Class not found, undefined functions.
+* **Parse Errors:** Syntax mistakes that usually break the whole site.
+* **Memory Exhaustion:** Plugins that eat too much RAM.
+* **Delayed Bombs:** Errors that only trigger on the `init` or `admin_init` hooks.
 
-### 2. Safely Timed Activate
-Don't leave heavy debugging tools running on production.
-* Activate for **15 Mins**, **1 Hour**, or **24 Hours**.
-* Auto-deactivates via `WP-Cron`.
+### 2. Snapshot & Restore Engine (New in v2.5.0)
+If a plugin causes a hard crash (White Screen of Death), PHP stops working immediately. Our engine handles this by:
+1.  Taking a **Snapshot** of active plugins before testing.
+2.  Registering a **Shutdown Handler** that blindly restores this snapshot if the script dies.
+3.  This guarantees your site comes back online instantly, even after a catastrophic failure.
 
-### 3. Error Log Dashboard
-A persistent history of every crash prevented.
-* View File, Line Number, and Error Message.
-* Filter by plugin.
-* One-click log clearing.
+### 3. Auto-Deactivation Timers
+Activate a plugin temporarily. Great for debugging or client access.
+* **Durations:** 15 mins, 30 mins, 1 hour, 12 hours, 24 hours.
+* **Auto-Off:** The plugin automatically deactivates when the timer expires.
+
+### 4. Developer Tools
+* **Error Logs:** View detailed stack traces of blocked plugins.
+* **Force Activation:** An "Activate Anyway" button to bypass safety checks if you *want* to break the site for debugging.
 
 ## 📦 Installation
 
 1.  Download the `.zip` file.
-2.  Go to **WordPress Dashboard > Plugins > Add New > Upload**.
-3.  Activate.
-4.  Go to your **Plugins List**. All "Activate" links are now protected.
+2.  Upload to your WordPress site via **Plugins > Add New > Upload Plugin**.
+3.  Activate "Safe Activation & Timer".
+4.  Go to your **Plugins** list. You will see all "Activate" links have changed to **"Safely Activate"**.
 
-## 🛠️ Testing the Crash Protection
+## 🛠️ Usage
 
-We provide a **Crash Suite** (a set of dummy plugins) to verify the system works.
-1.  Create a folder `wp-content/plugins/crash-test/`.
-2.  Create a file `crash.php` with this code:
-    ```php
-    <?php
-    /* Plugin Name: Crash Test */
-    if ( defined('ABSPATH') ) {
-        // Direct Fatal Error
-        $x = new ThisClassDoesNotExist();
-    }
-    ```
-3.  Go to your Plugins list and click **Safely Activate**.
-4.  **Result:** You should see a "Blocked" popup and a log entry for "Class not found".
+1.  Click **Safely Activate** on any plugin.
+2.  Choose a duration (e.g., **30 Minutes** or **Forever**).
+3.  Wait for the check (~2 seconds).
+    * **If Safe:** The plugin activates and the page reloads.
+    * **If Unsafe:** A red popup appears with the error details. The plugin remains inactive.
 
-## 🔧 Technical Details
+## 📋 Requirements
+* WordPress 5.8+
+* PHP 7.4+
 
-* **AJAX Handler:** `wp_ajax_pt_test_and_activate`
-* **Storage:** * Logs: `wp_options` table (`pt_error_logs`).
-    * Temp Files: `/wp-content/uploads/pt-logs/`.
-* **Cleanup:** Temp files are deleted immediately after reading. Logs are capped at 20 entries.
+## 📝 Changelog
 
-## 🤝 Contributing
+**v2.5.0**
+* **Major:** Implemented "Snapshot & Restore" database engine.
+* **Feature:** Added "Activate Anyway" button.
+* **Security:** Full compliance with WordPress.org security standards (Nonces, Sanitization).
+* **Fix:** Improved handling of "Double Encoding" bugs in plugin paths.
 
-1.  Fork the repository.
-2.  Create a feature branch (`git checkout -b feature/NewSafetyCheck`).
-3.  Commit your changes.
-4.  Push to the branch.
-5.  Open a Pull Request.
-
-## 📝 License
-
-GPLv2 or later.
+**v2.0.0**
+* Initial release with Timer and Basic Crash Checks.
