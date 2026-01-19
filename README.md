@@ -10,7 +10,7 @@ Safe Activation & Timer replaces the standard WordPress "Activate" link with a s
 
 You can download the latest version directly from GitHub:
 
-[**Download ZIP (v2.5.0)**](https://github.com/prabin15/plugin-timer/releases/download/v2.5.0/plugin-timer.zip)
+[**Download ZIP (v2.5.0)**](https://github.com/prabin15/plugin-timer/releases/download/v2.5.0/safe-activation.zip)
 
 *Note: This version requires manual installation. Go to Plugins > Add New > Upload Plugin.*
 
