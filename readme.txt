@@ -1,6 +1,6 @@
 === Safe Activation & Timer ===
 Contributors: prabin15
-Tags: plugins, safety, crash protection, timer, sandbox, debugging
+Tags: safety, crash protection, timer, sandbox, debugging
 Requires at least: 5.8
 Tested up to: 6.9
 Stable tag: 2.5.0
