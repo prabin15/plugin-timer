@@ -36,8 +36,11 @@ class PT_Dashboard {
     public function render_page() {
         $active_tab = 'dashboard';
         
-        // phpcs:ignore WordPress.Security.NonceVerification
+        // FIX: Ignore nonce warning for the URL parameter check (Line 40)
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         if ( isset( $_GET['tab'] ) ) {
+            // FIX: Ignore nonce warning for the usage of the parameter (Line 41)
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             $active_tab = sanitize_text_field( wp_unslash( $_GET['tab'] ) );
         }
         

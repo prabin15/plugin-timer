@@ -22,14 +22,14 @@ $timers = get_option( 'pt_active_timers', [] );
             <tbody>
                 <?php foreach ( $timers as $plugin => $expiry ) : 
                     $minutes_left = ceil( ( $expiry - time() ) / 60 );
-                    // Check if file exists to avoid warnings if plugin was deleted manually
                     if ( ! file_exists( WP_PLUGIN_DIR . '/' . $plugin ) ) {
                         continue;
                     }
                     $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin );
                     $name = $plugin_data['Name'];
                     
-                    // We prepare the slug, but we will ESCAPE it down below in the HTML
+                    // FIX: URL ENCODE HERE
+                    // The JS will pick this up, and PHP will urldecode it later
                     $slug = urlencode( $plugin );
                 ?>
                 <tr>
